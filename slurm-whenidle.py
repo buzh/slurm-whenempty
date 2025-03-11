@@ -10,7 +10,13 @@ cmd = ["squeue", "--json"]
 ret = subprocess.run(cmd, check=True, capture_output=True, text=True)
 jobs = json.loads(ret.stdout)
 
+cmd = ["sinfo", "--states=IDLE", "-h", "-o", "%n"]
+ret = subprocess.run(cmd, stdout=subprocess.PIPE, text=True)
+idlenodes = ret.stdout.splitlines()
+
 node_fin_table = {}
+for node in idlenodes:
+    node_fin_table[node] = 0
 
 def expand_noderange(noderange: str):
     pattern = re.compile(r'([^,\[]*?)\[(.*?)\]')
@@ -41,8 +47,6 @@ for job in jobs["jobs"]:
       nodes = expand_noderange(job["nodes"])
       end_time = job["end_time"]["number"]
       for node in nodes: 
-        if len(node) < 2 and len(node) > 0:
-          print(f"hmmm {node}")
         if node not in node_fin_table or end_time > node_fin_table[node]:
           node_fin_table[node] = end_time
 
@@ -52,6 +56,9 @@ print(f"{'Node':<20}{'Finishing time':<20}")
 print("=" * 42)
 
 for i in results:
-    t = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(results[i]))
-    print(f"{i:<20} : {t:<20}")
+    if results[i] == 0:
+      print(f"{i:<20} : IDLE NOW")
+    else:
+      t = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(results[i]))
+      print(f"{i:<20} : {t:<20}")
 
